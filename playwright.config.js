@@ -1,6 +1,10 @@
 const { defineConfig, devices } = require('@playwright/test');
 require('dotenv').config();
 
+if (!process.env.BASE_URL) {
+  throw new Error('BASE_URL is not defined. Please set it in .env file.');
+}
+
 module.exports = defineConfig({
   testDir: './tests',
   timeout: 30_000,
