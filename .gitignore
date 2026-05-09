@@ -16,3 +16,4 @@ npm-debug.log*
 dist/
 build/
 .parcel-cache/
+src/config/env.js
