@@ -17,3 +17,16 @@ dist/
 build/
 .parcel-cache/
 src/config/env.js
+
+# Agent and Copilot logs
+.copilot/
+.agent/
+.agents/
+agent-logs/
+agent-responses/
+agent-requests/
+copilot-logs/
+**/agent-*.json
+**/copilot-*.json
+.agent-history/
+.vscode/workspaceStorage/**/GitHub.copilot-chat/
