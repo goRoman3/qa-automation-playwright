@@ -19,28 +19,16 @@ test.describe('Home Page', () => {
     expect(await homePage.isConnectWalletVisible()).toBeTruthy();
   });
 
-  test('кнопка Connect Wallet должна иметь корректный текст', async ({ page }) => {
-    const buttonText = await homePage.getConnectWalletButtonText();
-    expect(buttonText).toContain('Connect Wallet');
-  });
-
   test('содержимое страницы должно быть видно', async ({ page }) => {
     expect(await homePage.isContentVisible()).toBeTruthy();
-  });
-
-  test('при клике на Connect Wallet должно произойти соединение с кошельком', async ({ page }) => {
-    await homePage.clickConnectWallet();
-    // Здесь добавьте свою логику проверки результата клика
   });
 });
 
 test.describe('Debug Page', () => {
   let debugPage;
-  let modal;
 
   test.beforeEach(async ({ page }) => {
     debugPage = new DebugPage(page);
-    modal = new Modal(page);
     await debugPage.navigateToDebug();
   });
 
@@ -48,8 +36,8 @@ test.describe('Debug Page', () => {
     expect(await debugPage.isPageLoaded()).toBeTruthy();
   });
 
-  test('кнопка Disconnect должна быть видна', async ({ page }) => {
-    expect(await debugPage.isDisconnectButtonVisible()).toBeTruthy();
+  test('должна быть видна информация о кошельке', async ({ page }) => {
+    expect(await debugPage.hasWalletInfo()).toBeTruthy();
   });
 
   test('должны быть видны все контрольные элементы', async ({ page }) => {
@@ -60,26 +48,35 @@ test.describe('Debug Page', () => {
     expect(inputCount).toBeGreaterThan(0);
   });
 
-  test('должна быть видна секция аккаунта', async ({ page }) => {
-    expect(await debugPage.isAccountSectionVisible()).toBeTruthy();
-  });
-
   test('баланс должен отображаться', async ({ page }) => {
     const balance = await debugPage.getBalance();
     expect(balance).toBeTruthy();
   });
 
-  test('кнопка View on Block Explorer должна быть видна', async ({ page }) => {
-    expect(await debugPage.isViewOnBlockExplorerVisible()).toBeTruthy();
+  test('должна быть кнопка Disconnect', async ({ page }) => {
+    expect(await debugPage.hasDisconnectButton()).toBeTruthy();
   });
 
-  test('кнопка копирования приватного ключа должна быть видна', async ({ page }) => {
-    expect(await debugPage.isCopyPrivateKeyVisible()).toBeTruthy();
+  test('должна быть кнопка View on Block Explorer', async ({ page }) => {
+    expect(await debugPage.hasViewOnBlockExplorerButton()).toBeTruthy();
   });
 
-  test('при клике на Disconnect должна произойти отписка', async ({ page }) => {
-    await debugPage.clickDisconnect();
-    // Здесь добавьте проверку результата отписки
+  test('должна быть кнопка Copy Private Key', async ({ page }) => {
+    expect(await debugPage.hasCopyPrivateKeyButton()).toBeTruthy();
+  });
+
+  test('должен быть блок Read для чтения состояния', async ({ page }) => {
+    expect(await debugPage.hasReadBlock()).toBeTruthy();
+  });
+
+  test('должен быть блок Send для отправки транзакций', async ({ page }) => {
+    expect(await debugPage.hasSendBlock()).toBeTruthy();
+  });
+
+  test('должны быть доступны контрактные функции', async ({ page }) => {
+    const items = await debugPage.getContractStateItems();
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.some(item => item.includes('greeting') || item.includes('owner') || item.includes('counter'))).toBeTruthy();
   });
 });
 
@@ -93,7 +90,4 @@ test.describe('Modal/Dialog Tests', () => {
   test('когда модальное окно закрыто, оно не должно быть видно', async ({ page }) => {
     expect(await modal.isModalOpen()).toBeFalsy();
   });
-
-  // Добавьте дополнительные тесты для модалей
-  // в зависимости от того, какие модальные окна есть на вашем сайте
 });

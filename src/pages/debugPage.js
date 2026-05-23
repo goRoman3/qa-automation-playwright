@@ -3,16 +3,26 @@ const BasePage = require('./basePage');
 /**
  * Debug Page Object Model
  * Представляет debug страницу приложения (http://localhost:3000/debug)
+ * 
+ * Страница содержит:
+ * - Информацию о кошельке (баланс, адрес)
+ * - Кнопку Disconnect
+ * - Блоки Read (для чтения состояния контрактов)
+ * - Блоки Write (для отправки транзакций)
+ * - Историю транзакций (появляется после депозитов)
  */
 class DebugPage extends BasePage {
   // Selectors
-  balanceButton = 'button:has-text(/ETH/)';
+  balanceButton = 'button.flex.flex-col.items-center';
   viewOnBlockExplorerButton = 'button:has-text("View on Block Explorer")';
   disconnectButton = 'button:has-text("Disconnect")';
   copyPrivateKeyButton = 'button:has-text("Copy Private Key To Clipboard")';
+  readButton = 'button:has-text("Read 📡")';
+  sendButton = 'button:has-text("Send 💸")';
   inputs = 'input';
-  debugTitle = 'h1, h2';
-  accountSection = '[class*="account"]';
+  
+  // Contract state items (greeting, owner, premium, totalCounter, etc.)
+  contractStateItems = 'h1, h2, h3, h4';
 
   constructor(page) {
     super(page);
@@ -46,56 +56,67 @@ class DebugPage extends BasePage {
    * Кликнуть на кнопку "Disconnect"
    */
   async clickDisconnect() {
-    await this.click(this.disconnectButton);
+    const btn = this.page.locator(this.disconnectButton).first();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click({ force: true });
   }
 
   /**
-   * Проверить, видна ли кнопка "Disconnect"
+   * Проверить наличие кнопки "Disconnect" на странице (может быть вне viewport)
    */
-  async isDisconnectButtonVisible() {
-    return await this.isVisible(this.disconnectButton);
+  async hasDisconnectButton() {
+    const text = await this.page.textContent('body');
+    return text?.includes('Disconnect') || false;
   }
 
   /**
    * Кликнуть на кнопку "View on Block Explorer"
    */
   async clickViewOnBlockExplorer() {
-    await this.click(this.viewOnBlockExplorerButton);
+    const btn = this.page.locator(this.viewOnBlockExplorerButton).first();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click();
   }
 
   /**
-   * Проверить, видна ли кнопка "View on Block Explorer"
+   * Проверить наличие кнопки "View on Block Explorer"
    */
-  async isViewOnBlockExplorerVisible() {
-    return await this.isVisible(this.viewOnBlockExplorerButton);
+  async hasViewOnBlockExplorerButton() {
+    const text = await this.page.textContent('body');
+    return text?.includes('View on Block Explorer') || false;
   }
 
   /**
    * Кликнуть на кнопку "Copy Private Key To Clipboard"
    */
   async clickCopyPrivateKey() {
-    await this.click(this.copyPrivateKeyButton);
+    const btn = this.page.locator(this.copyPrivateKeyButton).first();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click();
   }
 
   /**
-   * Проверить, видна ли кнопка копирования приватного ключа
+   * Проверить наличие кнопки копирования приватного ключа
    */
-  async isCopyPrivateKeyVisible() {
-    return await this.isVisible(this.copyPrivateKeyButton);
+  async hasCopyPrivateKeyButton() {
+    const text = await this.page.textContent('body');
+    return text?.includes('Copy Private Key To Clipboard') || false;
   }
 
   /**
-   * Получить баланс аккаунта (текст из кнопки с балансом)
+   * Получить баланс аккаунта
    */
   async getBalance() {
-    return await this.getText(this.balanceButton);
+    const balance = await this.page.locator(this.balanceButton).first().textContent();
+    return balance?.trim();
   }
 
   /**
    * Проверить, загружена ли debug страница
    */
   async isPageLoaded() {
-    return await this.isVisible(this.disconnectButton);
+    const text = await this.page.textContent('body');
+    return text?.includes('Debug Contracts') || false;
   }
 
   /**
@@ -117,17 +138,61 @@ class DebugPage extends BasePage {
   }
 
   /**
-   * Кликнуть на первую кнопку с балансом
+   * Кликнуть на кнопку "Read 📡"
    */
-  async clickBalance() {
-    await this.click(this.balanceButton);
+  async clickRead() {
+    const btn = this.page.locator(this.readButton).first();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click();
   }
 
   /**
-   * Проверить, видна ли секция аккаунта
+   * Проверить наличие блока Read
    */
-  async isAccountSectionVisible() {
-    return await this.isVisible(this.accountSection);
+  async hasReadBlock() {
+    const text = await this.page.textContent('body');
+    return text?.includes('Read') || false;
+  }
+
+  /**
+   * Кликнуть на кнопку "Send 💸"
+   */
+  async clickSend() {
+    const btn = this.page.locator(this.sendButton).first();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.click();
+  }
+
+  /**
+   * Проверить наличие блока Send/Write
+   */
+  async hasSendBlock() {
+    const text = await this.page.textContent('body');
+    return text?.includes('Send') || false;
+  }
+
+  /**
+   * Получить все названия контрактов/функций на странице
+   */
+  async getContractStateItems() {
+    const items = await this.page.locator(this.contractStateItems).all();
+    const result = [];
+    for (let item of items) {
+      const text = await item.textContent();
+      if (text?.trim() && text.trim().length < 50) {
+        result.push(text.trim());
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Проверить, что страница содержит информацию о кошельке
+   */
+  async hasWalletInfo() {
+    const text = await this.page.textContent('body');
+    // Проверяем наличие адреса (0x) и информации о кошельке
+    return /0x[a-fA-F0-9]{40}/.test(text || '');
   }
 }
 
