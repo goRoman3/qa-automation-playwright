@@ -1,64 +1,45 @@
 const BasePage = require('./basePage');
 
-/**
- * Home Page Object Model
- * Представляет главную страницу приложения (http://localhost:3000/)
- */
 class HomePage extends BasePage {
-  // Selectors
-  connectWalletButton = 'button.btn.btn-primary';
-  mainHeading = 'h1';
-  pageContainer = 'body';
-
   constructor(page) {
     super(page);
   }
 
-  /**
-   * Перейти на главную страницу
-   */
   async navigateToHome() {
     await this.goto('/');
     await this.waitForPageLoad();
+    // Wallet dropdown is hidden (visibility:hidden) when closed. Use DOM attachment
+    // as the hydration-complete signal — don't wait for visibility.
+    await this.page
+      .locator('button:has-text("Disconnect"), button:has-text("Connect Wallet")')
+      .first()
+      .waitFor({ state: 'attached', timeout: 15000 });
   }
 
-  /**
-   * Кликнуть на кнопку "Connect Wallet"
-   */
-  async clickConnectWallet() {
-    const btn = this.page.locator(this.connectWalletButton);
-    await btn.scrollIntoViewIfNeeded();
-    await btn.click();
+  async isPageLoaded() {
+    // Any primary button in the header/nav area means the app rendered
+    return (await this.page.locator('button').count()) > 0;
   }
 
-  /**
-   * Проверить наличие кнопки подключения кошелька на странице
-   */
+  // Returns true when wallet is NOT yet connected (Connect Wallet button visible)
   async isConnectWalletVisible() {
     const text = await this.page.textContent('body');
     return text?.includes('Connect Wallet') || false;
   }
 
-  /**
-   * Получить текст кнопки подключения кошелька
-   */
-  async getConnectWalletButtonText() {
-    return await this.getText(this.connectWalletButton);
-  }
-
-  /**
-   * Проверить, загружена ли страница (наличие основного контента)
-   */
-  async isPageLoaded() {
-    return await this.page.locator(this.connectWalletButton).count() > 0;
-  }
-
-  /**
-   * Проверить, видно ли основное содержимое страницы
-   */
-  async isContentVisible() {
+  // Returns true when wallet is already connected (Disconnect button in DOM)
+  // Uses textContent because the button lives in a hidden dropdown
+  async isWalletConnected() {
     const text = await this.page.textContent('body');
-    return text?.includes('Connect Wallet') || false;
+    return text?.includes('Disconnect') || false;
+  }
+
+  async clickConnectWallet() {
+    await this.page.getByRole('button', { name: /Connect Wallet/i }).click();
+  }
+
+  async clickDisconnect() {
+    await this.page.getByRole('button', { name: /Disconnect/i }).first().click();
   }
 }
 

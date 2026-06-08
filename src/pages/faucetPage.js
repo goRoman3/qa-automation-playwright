@@ -1,128 +1,88 @@
 const BasePage = require('./basePage');
 
-/**
- * Faucet Page Object
- * Представляет фаусет на главной странице и функционал отправки средств
- */
 class FaucetPage extends BasePage {
-  // Selectors
-  localFaucetHeading = 'text=Local Faucet';
-  destinationAddressInput = 'input[placeholder="Destination Address"]';
-  amountToSendInput = 'input[placeholder="Amount to send"]';
-  sendButton = 'button.btn.btn-primary:has-text("Send")';
-  blockExplorerButton = 'button:has-text("Block Explorer")';
-  
-  // Success messages
-  successMessage = 'text=Transaction completed successfully!';
-
   constructor(page) {
     super(page);
   }
 
-  /**
-   * Перейти на главную страницу и дождаться загрузки фаусета
-   */
+  // Locators (lazy getters so they resolve at call time, not construction time)
+  get heading() { return this.page.getByRole('heading', { name: 'Local Faucet' }); }
+  get destinationInput() { return this.page.getByPlaceholder('Destination Address'); }
+  get amountInput() { return this.page.getByPlaceholder('Amount to send'); }
+  // Exact match to avoid hitting "Send 💸" buttons on /debug
+  get sendButton() { return this.page.getByRole('button', { name: /^Send$/ }).first(); }
+
   async navigateToFaucet() {
     await this.goto('/');
     await this.waitForPageLoad();
-    
-    // Убедимся что фаусет видна
-    await this.page.waitForSelector('text=Local Faucet', { timeout: 5000 });
+    // Faucet lives inside a closed DaisyUI modal (visibility:hidden). Wait for DOM attachment
+    // (not visibility) as a React-hydration-complete signal.
+    await this.page.locator('h3:has-text("Local Faucet")').waitFor({ state: 'attached', timeout: 15000 });
   }
 
-  /**
-   * Ввести адрес назначения
-   */
+  // Open the faucet modal by toggling the DaisyUI checkbox directly.
+  // More reliable than clicking the label trigger under parallel test load.
+  async openModal() {
+    await this.page.locator('#faucet-modal').evaluate(el => {
+      el.checked = true;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await this.destinationInput.waitFor({ state: 'visible', timeout: 15000 });
+  }
+
   async enterDestinationAddress(address) {
-    await this.page.locator(this.destinationAddressInput).fill(address);
+    await this.destinationInput.fill(address);
   }
 
-  /**
-   * Ввести сумму для отправки
-   */
   async enterAmountToSend(amount) {
-    await this.page.locator(this.amountToSendInput).fill(amount.toString());
+    await this.amountInput.fill(amount.toString());
   }
 
-  /**
-   * Получить значение адреса получателя
-   */
   async getDestinationAddress() {
-    return await this.page.locator(this.destinationAddressInput).inputValue();
+    return this.destinationInput.inputValue();
   }
 
-  /**
-   * Получить значение суммы
-   */
   async getAmountToSend() {
-    return await this.page.locator(this.amountToSendInput).inputValue();
+    return this.amountInput.inputValue();
   }
 
-  /**
-   * Нажать кнопку Send для отправки средств
-   */
   async clickSend() {
-    await this.page.locator(this.sendButton).first().click();
+    await this.sendButton.click();
   }
 
-  /**
-   * Ждать появления сообщения об успешной транзакции
-   */
-  async waitForSuccessMessage() {
-    await this.page.waitForSelector(this.successMessage, { timeout: 10000 });
-  }
-
-  /**
-   * Проверить наличие сообщения об успешной транзакции
-   */
-  async hasSuccessMessage() {
-    try {
-      await this.page.waitForSelector(this.successMessage, { timeout: 5000 });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Получить текст сообщения об успехе
-   */
-  async getSuccessMessage() {
-    return await this.page.locator(this.successMessage).textContent();
-  }
-
-  /**
-   * Нажать на кнопку "Block Explorer"
-   */
-  async clickBlockExplorer() {
-    // Ищем кнопку Block Explorer рядом с фаусетом
-    const faucetSection = this.page.locator('text=Local Faucet').locator('..').locator('..').first();
-    const blockExplorerBtn = faucetSection.locator(this.blockExplorerButton);
-    await blockExplorerBtn.click();
-  }
-
-  /**
-   * Заполнить форму фаусета и отправить
-   */
   async sendFunds(destinationAddress, amount) {
     await this.enterDestinationAddress(destinationAddress);
     await this.enterAmountToSend(amount);
     await this.clickSend();
   }
 
-  /**
-   * Проверить, видна ли форма фаусета
-   */
   async isFaucetVisible() {
-    const text = await this.page.textContent('body');
-    return text?.includes('Local Faucet') || false;
+    return this.heading.isVisible();
   }
 
-  /**
-   * Проверить, видна ли кнопка Send для фаусета
-   */
-  async isSendButtonVisible() {
-    return await this.page.locator(this.sendButton).isVisible().catch(() => false);
+  async areFaucetInputsPresent() {
+    const destCount = await this.destinationInput.count();
+    const amountCount = await this.amountInput.count();
+    return destCount > 0 && amountCount > 0;
+  }
+
+  async isSendButtonPresent() {
+    // Send button lives inside the closed modal; use raw filter (finds hidden elements)
+    return (await this.page.locator('button').filter({ hasText: 'Send' }).count()) > 0;
+  }
+
+  // Waits for the success toast/message after sending funds
+  async waitForSuccessMessage() {
+    await this.page.getByText(/Transaction completed successfully/i).waitFor({ timeout: 10000 });
+  }
+
+  async hasSuccessMessage() {
+    try {
+      await this.waitForSuccessMessage();
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

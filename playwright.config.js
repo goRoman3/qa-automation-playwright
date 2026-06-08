@@ -31,6 +31,9 @@ module.exports = defineConfig({
     navigationTimeout: 30000,
     actionTimeout: 15000,
 
+    /* Assertions must wait up to 15 s for the Next.js app to hydrate */
+    expect: { timeout: 15000 },
+
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 

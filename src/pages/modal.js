@@ -1,128 +1,72 @@
 /**
- * Modal/Dialog Page Object
- * Используется для работы с модальными окнами и диалоговыми окнами
- * Может использоваться независимо или в комбинации с другими Page Objects
+ * Modal Page Object
+ *
+ * Scaffold-ETH 2 uses DaisyUI modals which are controlled by hidden checkboxes,
+ * NOT by [role="dialog"]. A modal is "open" when its controlling checkbox is checked.
+ *
+ * Standard ARIA dialogs ([role="dialog"]) are also supported for future pages.
  */
 class Modal {
-  // Selectors для различных типов модалей
-  dialogRole = '[role="dialog"]';
-  alertRole = '[role="alertdialog"]';
-  modalBackdrop = '[class*="backdrop"], [class*="overlay"]';
-  closeButton = 'button[aria-label="close"], button[aria-label="Close"], [class*="close"]';
-
   constructor(page) {
     this.page = page;
   }
 
-  /**
-   * Проверить, открыто ли модальное окно
-   */
+  // True when any DaisyUI modal checkbox is checked OR a standard dialog is visible
   async isModalOpen() {
-    return await this.page.isVisible(this.dialogRole);
+    const daisyOpen = await this.page.locator('.modal input[type="checkbox"]:checked').count();
+    if (daisyOpen > 0) return true;
+    return this.page.locator('[role="dialog"]').isVisible().catch(() => false);
   }
 
-  /**
-   * Проверить, видна ли спецификация алерта
-   */
   async isAlertDialogOpen() {
-    return await this.page.isVisible(this.alertRole);
+    return this.page.locator('[role="alertdialog"]').isVisible().catch(() => false);
   }
 
-  /**
-   * Получить текст модального окна
-   */
-  async getModalText() {
-    const modal = await this.page.locator(this.dialogRole).first();
-    return await modal.textContent();
+  // Open a DaisyUI modal by clicking its label trigger
+  async openModalByLabel(labelText) {
+    await this.page.getByRole('label', { name: labelText }).click();
   }
 
-  /**
-   * Закрыть модальное окно кликом на кнопку закрытия
-   */
+  // Close a DaisyUI modal by unchecking its controlling checkbox
   async closeModal() {
-    const closeBtn = await this.page.locator(this.closeButton).first();
-    if (await closeBtn.isVisible()) {
-      await closeBtn.click();
+    const checked = this.page.locator('.modal input[type="checkbox"]:checked').first();
+    if (await checked.count() > 0) {
+      await checked.evaluate(el => { el.checked = false; el.dispatchEvent(new Event('change')); });
+      return;
     }
+    // Fallback: standard close button
+    const closeBtn = this.page.locator('button[aria-label="close"], button[aria-label="Close"]').first();
+    if (await closeBtn.isVisible()) await closeBtn.click();
   }
 
-  /**
-   * Закрыть модальное окно кликом на бэкдроп
-   */
-  async closeModalByBackdrop() {
-    const backdrop = await this.page.locator(this.modalBackdrop).first();
-    if (await backdrop.isVisible()) {
-      // Клик вне модального окна
-      await backdrop.click({ position: { x: 10, y: 10 } });
-    }
+  async getModalText() {
+    const modal = this.page.locator('[role="dialog"]').first();
+    return modal.textContent();
   }
 
-  /**
-   * Получить все кнопки внутри модального окна
-   */
   async getModalButtons() {
-    const modal = await this.page.locator(this.dialogRole).first();
-    return await modal.locator('button').all();
+    return this.page.locator('[role="dialog"] button').all();
   }
 
-  /**
-   * Кликнуть на кнопку в модальном окне по тексту
-   */
   async clickModalButton(buttonText) {
-    const modal = await this.page.locator(this.dialogRole).first();
-    const button = modal.locator(`button:has-text("${buttonText}")`);
-    await button.click();
+    await this.page.locator('[role="dialog"]').getByRole('button', { name: buttonText }).click();
   }
 
-  /**
-   * Получить текст заголовка модального окна
-   */
   async getModalTitle() {
-    const modal = await this.page.locator(this.dialogRole).first();
-    const title = modal.locator('h1, h2, h3, [role="heading"]').first();
-    return await title.textContent();
+    return this.page
+      .locator('[role="dialog"]')
+      .locator('h1, h2, h3, [role="heading"]')
+      .first()
+      .textContent();
   }
 
-  /**
-   * Ждать, пока модальное окно закроется
-   */
   async waitForModalClose() {
-    await this.page.waitForFunction(
-      () => !document.querySelector('[role="dialog"]'),
-      { timeout: 5000 }
-    );
+    await this.page.locator('.modal input[type="checkbox"]:checked').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
+    await this.page.waitForFunction(() => !document.querySelector('[role="dialog"]'), { timeout: 5000 }).catch(() => {});
   }
 
-  /**
-   * Ждать, пока модальное окно откроется
-   */
   async waitForModalOpen() {
-    await this.page.waitForSelector(this.dialogRole, { timeout: 5000 });
-  }
-
-  /**
-   * Получить все инпуты в модальном окне
-   */
-  async getModalInputs() {
-    const modal = await this.page.locator(this.dialogRole).first();
-    return await modal.locator('input').all();
-  }
-
-  /**
-   * Заполнить инпут в модальном окне по индексу
-   */
-  async fillModalInput(index, text) {
-    const inputs = await this.getModalInputs();
-    if (inputs[index]) {
-      await inputs[index].fill(text);
-    }
-  }
-
-  /**
-   * Получить видимый модальный элемент
-   */
-  async getModalElement() {
-    return await this.page.locator(this.dialogRole).first();
+    await this.page.locator('.modal input[type="checkbox"]:checked, [role="dialog"]').waitFor({ timeout: 5000 });
   }
 }
 

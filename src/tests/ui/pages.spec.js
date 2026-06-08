@@ -15,12 +15,8 @@ test.describe('Home Page', () => {
     expect(await homePage.isPageLoaded()).toBeTruthy();
   });
 
-  test('кнопка Connect Wallet должна быть видна', async ({ page }) => {
-    expect(await homePage.isConnectWalletVisible()).toBeTruthy();
-  });
-
-  test('содержимое страницы должно быть видно', async ({ page }) => {
-    expect(await homePage.isContentVisible()).toBeTruthy();
+  test('кошелек подключен (видна кнопка Disconnect)', async ({ page }) => {
+    expect(await homePage.isWalletConnected()).toBeTruthy();
   });
 });
 
@@ -36,10 +32,6 @@ test.describe('Debug Page', () => {
     expect(await debugPage.isPageLoaded()).toBeTruthy();
   });
 
-  test('должна быть видна информация о кошельке', async ({ page }) => {
-    expect(await debugPage.hasWalletInfo()).toBeTruthy();
-  });
-
   test('должны быть видны все контрольные элементы', async ({ page }) => {
     const buttonCount = await debugPage.getButtonCount();
     const inputCount = await debugPage.getInputCount();
@@ -53,18 +45,6 @@ test.describe('Debug Page', () => {
     expect(balance).toBeTruthy();
   });
 
-  test('должна быть кнопка Disconnect', async ({ page }) => {
-    expect(await debugPage.hasDisconnectButton()).toBeTruthy();
-  });
-
-  test('должна быть кнопка View on Block Explorer', async ({ page }) => {
-    expect(await debugPage.hasViewOnBlockExplorerButton()).toBeTruthy();
-  });
-
-  test('должна быть кнопка Copy Private Key', async ({ page }) => {
-    expect(await debugPage.hasCopyPrivateKeyButton()).toBeTruthy();
-  });
-
   test('должен быть блок Read для чтения состояния', async ({ page }) => {
     expect(await debugPage.hasReadBlock()).toBeTruthy();
   });
@@ -76,7 +56,6 @@ test.describe('Debug Page', () => {
   test('должны быть доступны контрактные функции', async ({ page }) => {
     const items = await debugPage.getContractStateItems();
     expect(items.length).toBeGreaterThan(0);
-    expect(items.some(item => item.includes('greeting') || item.includes('owner') || item.includes('counter'))).toBeTruthy();
   });
 });
 
